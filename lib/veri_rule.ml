@@ -34,7 +34,7 @@ module Field = struct
       let s = Printf.sprintf "error in field %s" s in
       Error (Error.of_string s)
 
-  let is_empty f = snd f = empty
+  let is_empty f = String.equal (snd f) empty
 end
 
 type action = Action.t [@@deriving bin_io, compare, sexp]
@@ -91,7 +91,7 @@ module S = struct
   type nonrec t = t
 
   let to_string t =
-    let contains_space s = String.exists ~f:(fun c -> c = ' ') s in
+    let contains_space s = String.exists ~f:(Char.equal ' ') s in
     let of_field f =
       if Field.is_empty f then "''"
       else if contains_space (snd f) then Printf.sprintf "'%s'" (snd f)
@@ -100,7 +100,7 @@ module S = struct
       (of_field t.insn) (of_field t.left) (of_field t.right)
 
   let rex = Pcre.regexp "'.*?'|\".*?\"|\\S+"
-  let is_quote c = c = '\"' || c = '\''
+  let is_quote c = Char.equal c '\"' || Char.equal c '\''
   let unquote s = String.strip ~drop:is_quote s
 
   (** Not_found could be raised here  *)
