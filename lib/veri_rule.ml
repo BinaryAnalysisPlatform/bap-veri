@@ -2,6 +2,7 @@ open Core_kernel
 open Regular.Std
 
 type trial = Pcre.regexp
+let compare_trial (_ : trial) (_ : trial) = 0 (* TODO: this is wrong *)
 
 let empty = ""
 let trial_exn s = Pcre.regexp ~flags:[`ANCHORED] s
@@ -23,7 +24,7 @@ module Action = struct
 end
 
 module Field = struct
-  type t = trial * string
+  type t = trial * string [@@deriving compare]
 
   let create_exn s = trial_exn s, s
 
@@ -38,7 +39,7 @@ module Field = struct
 end
 
 type action = Action.t [@@deriving bin_io, compare, sexp]
-type field = Field.t
+type field = Field.t [@@deriving compare]
 
 type t = {
   action : action;
@@ -46,7 +47,7 @@ type t = {
   both   : field;
   left   : field;
   right  : field;
-} [@@deriving fields]
+} [@@deriving fields, compare]
 
 exception Bad_field of string
 
