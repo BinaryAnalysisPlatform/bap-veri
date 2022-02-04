@@ -11,7 +11,7 @@ type events = Value.Set.t
 type rule = Rule.t [@@deriving bin_io, compare, sexp]
 
 module Matched = struct
-  type t = event list * event list [@@deriving bin_io, sexp]
+  type t = event list * event list [@@deriving bin_io, compare, sexp]
 
   include Regular.Make(struct
       type nonrec t = t [@@deriving bin_io, compare, sexp]
@@ -45,7 +45,7 @@ let string_of_events ev ev' =
   String.concat ~sep:" " [Value.pps () ev; Value.pps () ev']
 
 let sat_events r ev ev' =
-  Value.typeid ev = Value.typeid ev' &&
+  Value.Typeid.equal (Value.typeid ev) (Value.typeid ev') &&
   Rule.match_field r `Both (string_of_events ev ev')
 
 module G = struct
@@ -137,7 +137,7 @@ let diff events events' =
   let right = Set.diff events' events in
   let to_str e = Value.pps () e in
   let is_unique other ev =
-    not (Set.exists other ~f:(fun ev' -> to_str ev = to_str ev')) in
+    not (Set.exists other ~f:(fun ev' -> String.equal (to_str ev) (to_str ev'))) in
   Set.filter ~f:(is_unique right) left,
   Set.filter ~f:(is_unique left) right
 
@@ -168,7 +168,7 @@ let denied rules insn events events' =
       | None -> loop acc rls (evs,evs')
       | Some matched ->
         let acc' =
-          if Rule.action rule = Rule.skip then acc
+          if Veri_rule.compare_action (Rule.action rule) Rule.skip = 0 then acc
           else (rule, matched) :: acc in
         remove_matched evs evs' matched |>
         loop acc' rls in

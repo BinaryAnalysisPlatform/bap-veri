@@ -13,7 +13,7 @@ module Dis = Disasm_expert.Basic
 let read_rules fname =
   let comments = "#" in
   let is_sensible s =
-    s <> "" && not (String.is_prefix ~prefix:comments s) in
+    String.(s <> "") && not (String.is_prefix ~prefix:comments s) in
   let inc = In_channel.create fname in
   let strs = In_channel.input_lines inc in
   In_channel.close inc;
@@ -31,7 +31,7 @@ let string_of_error = function
     Printf.sprintf "protocol error: %s"
       (Info.to_string_hum (Error.to_info er))
   | `System_error er ->
-    Printf.sprintf "system error: %s" (Unix.error_message er)
+    Printf.sprintf "system error: %s" (Caml_unix.error_message er)
   | `No_provider -> "no provider"
   | `Ambiguous_uri -> "ambiguous uri"
 
@@ -50,7 +50,7 @@ let errors_stream s =
   let pp_result fmt report  =
     Format.fprintf fmt "%a" Veri_report.pp report;
     Format.print_flush () in
-  ignore(Stream.subscribe s (pp_result Format.std_formatter))
+  ignore(Stream.subscribe s (pp_result Format.std_formatter) : Stream.id)
 
 let eval_file file policy show_errs =
   let mk_er s = Error (Error.of_string s) in
@@ -73,18 +73,18 @@ let eval_file file policy show_errs =
           Ok ctxt'#stat)
 
 let read_dir path =
-  let dir = Unix.opendir path in
+  let dir = Caml_unix.opendir path in
   let fullpath file = String.concat ~sep:"/" [path; file] in
   let next () =
     try
-      Some (Unix.readdir dir)
+      Some (Caml_unix.readdir dir)
     with End_of_file -> None in
   let rec folddir acc =
     match next () with
     | Some file -> folddir (fullpath file :: acc)
     | None -> acc in
   let files = folddir [] in
-  Unix.closedir dir;
+  Caml_unix.closedir dir;
   files
 
 let main path rules out show_errs show_stat _ctxt =
@@ -144,8 +144,8 @@ let features_used = [
   "lifter";
 ]
 
-let _ = Extension.Command.(begin
+let _ = (Extension.Command.(begin
       declare ~doc:man "veri"
         ~requires:features_used
         (args $input $rules $output $show_errors $show_stat)
-    end) @@ main
+    end) @@ main : unit)

@@ -2,6 +2,7 @@ open Core_kernel
 open Regular.Std
 
 type trial = Pcre.regexp
+let compare_trial (_ : trial) (_ : trial) = 0 (* TODO: this is wrong *)
 
 let empty = ""
 let trial_exn s = Pcre.regexp ~flags:[`ANCHORED] s
@@ -23,7 +24,7 @@ module Action = struct
 end
 
 module Field = struct
-  type t = trial * string
+  type t = trial * string [@@deriving compare]
 
   let create_exn s = trial_exn s, s
 
@@ -34,11 +35,11 @@ module Field = struct
       let s = Printf.sprintf "error in field %s" s in
       Error (Error.of_string s)
 
-  let is_empty f = snd f = empty
+  let is_empty f = String.equal (snd f) empty
 end
 
 type action = Action.t [@@deriving bin_io, compare, sexp]
-type field = Field.t
+type field = Field.t [@@deriving compare]
 
 type t = {
   action : action;
@@ -46,7 +47,7 @@ type t = {
   both   : field;
   left   : field;
   right  : field;
-} [@@deriving fields]
+} [@@deriving fields, compare]
 
 exception Bad_field of string
 
@@ -91,7 +92,7 @@ module S = struct
   type nonrec t = t
 
   let to_string t =
-    let contains_space s = String.exists ~f:(fun c -> c = ' ') s in
+    let contains_space s = String.exists ~f:(Char.equal ' ') s in
     let of_field f =
       if Field.is_empty f then "''"
       else if contains_space (snd f) then Printf.sprintf "'%s'" (snd f)
@@ -100,7 +101,7 @@ module S = struct
       (of_field t.insn) (of_field t.left) (of_field t.right)
 
   let rex = Pcre.regexp "'.*?'|\".*?\"|\\S+"
-  let is_quote c = c = '\"' || c = '\''
+  let is_quote c = Char.equal c '\"' || Char.equal c '\''
   let unquote s = String.strip ~drop:is_quote s
 
   (** Not_found could be raised here  *)

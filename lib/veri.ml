@@ -121,7 +121,7 @@ let new_insn arch mem insn =
 let lift arch mem insn =
   match KB.run Theory.Program.cls (new_insn arch mem insn) KB.empty with
   | Ok (code,_) ->
-    let insn = KB.Value.get Theory.Program.Semantics.slot code in
+    let insn = KB.Value.get Theory.Semantics.slot code in
     Ok (Insn.bil insn)
   | Error c ->
     let er = Error.of_string (Sexp.to_string (KB.sexp_of_conflict c)) in
@@ -139,18 +139,18 @@ let other_events c = match c#other with
   | None -> []
   | Some c -> Set.to_list c#events
 
-let is_previous_mv tag test ev =
+(*let is_previous_mv tag test ev =
   match Value.get tag ev with
   | None -> false
   | Some mv -> Move.cell mv = test
 
 let is_previous_write = is_previous_mv Event.register_write
-let is_previous_store = is_previous_mv Event.memory_store
+let is_previous_store = is_previous_mv Event.memory_store*)
 let self_events c = Set.to_list c#events
 let same_var var mv =
   String.equal (Var.name var) (Var.name @@ Move.cell mv)
 
-let same_addr addr mv = addr = Move.cell mv
+let same_addr addr mv = Addr.equal addr (Move.cell mv)
 
 type find = [ `Addr of addr | `Var of var ]
 
