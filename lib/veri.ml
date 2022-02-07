@@ -31,6 +31,9 @@ let create_mem_load  = create_move_event Event.memory_load
 let create_reg_read  = create_move_event Event.register_read
 let create_reg_write = create_move_event Event.register_write
 let value = Bil.Result.value [@warning "-D"]
+let same_value x y =
+  Bil.Result.Id.equal (Bil.Result.id x) (Bil.Result.id y)
+[@@warning "-D"]
 
 module Disasm = struct
   module Dis = Disasm_expert.Basic
@@ -144,8 +147,8 @@ let other_events c = match c#other with
   | None -> false
   | Some mv -> Move.cell mv = test
 
-let is_previous_write = is_previous_mv Event.register_write
-let is_previous_store = is_previous_mv Event.memory_store*)
+  let is_previous_write = is_previous_mv Event.register_write
+  let is_previous_store = is_previous_mv Event.memory_store*)
 let self_events c = Set.to_list c#events
 let same_var var mv =
   String.equal (Var.name var) (Var.name @@ Move.cell mv)
@@ -199,13 +202,15 @@ class ['a] t arch dis =
       | Some data -> self#eval_exp (Bil.int data)
 
     method! update var result =
-      super#update var result >>= fun () ->
-      match value result with
-      | Bil.Imm data ->
-        if not (Var.is_virtual var) then
-          self#update_event (create_reg_write var data)
-        else SM.return ()
-      | Bil.Mem _ | Bil.Bot -> SM.return ()
+      self#lookup var >>= fun old ->
+      if same_value old result then SM.return ()
+      else super#update var result >>= fun () ->
+        match value result with
+        | Bil.Imm data ->
+          if not (Var.is_virtual var) then
+            self#update_event (create_reg_write var data)
+          else SM.return ()
+        | Bil.Mem _ | Bil.Bot -> SM.return ()
 
     method! eval_store ~mem ~addr data endian size =
       self#eval_exp addr >>= fun addr_r ->
