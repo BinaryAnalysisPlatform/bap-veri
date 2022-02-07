@@ -28,7 +28,7 @@ include Regular.Make(struct
 
     let pp_code fmt s =
       let pp fmt s =
-        String.iter ~f:(fun c -> Format.fprintf fmt "%X " (Char.to_int c)) s in
+        String.iter ~f:(fun c -> Format.fprintf fmt "%02X " (Char.to_int c)) s in
       Format.fprintf fmt "@[<h>%a@]" pp s
 
     let pp_evs fmt evs =
@@ -41,7 +41,7 @@ include Regular.Make(struct
 
     let pp fmt t =
       let bil = Stmt.simpl t.bil in
-      Format.fprintf fmt "@[<v>%s %a@,left: %a@,right: %a@,%a@]@."
+      Format.fprintf fmt "@[<v>%s %a@,left:  %a@,right: %a@,%a@]@."
         t.insn pp_code t.code pp_evs t.left pp_evs t.right Bil.pp bil;
       List.iter ~f:(pp_data fmt) t.data;
       Format.print_newline ()

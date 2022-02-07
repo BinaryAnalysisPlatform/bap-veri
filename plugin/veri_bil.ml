@@ -47,8 +47,9 @@ let make_policy = function
     List.fold ~f:Veri_policy.add ~init:Veri_policy.empty
 
 let errors_stream s =
+  let hline = String.make 72 '=' in
   let pp_result fmt report  =
-    Format.fprintf fmt "%a" Veri_report.pp report;
+    Format.fprintf fmt "%s@\n%a" hline Veri_report.pp report;
     Format.print_flush () in
   ignore(Stream.subscribe s (pp_result Format.std_formatter) : Stream.id)
 
@@ -145,7 +146,7 @@ let features_used = [
 ]
 
 let _ = (Extension.Command.(begin
-      declare ~doc:man "veri"
-        ~requires:features_used
-        (args $input $rules $output $show_errors $show_stat)
-    end) @@ main : unit)
+    declare ~doc:man "veri"
+      ~requires:features_used
+      (args $input $rules $output $show_errors $show_stat)
+  end) @@ main : unit)
