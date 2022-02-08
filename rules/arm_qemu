@@ -12,6 +12,21 @@ SKIP .* 'GE <= .*' ''
 
 SKIP .* 'PC => .*' ''
 
+## Kernel-provided User Helpers
+# See https://www.kernel.org/doc/Documentation/arm/kernel_user_helpers.txt
+
+# kuser_helper_version
+SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0FFC'
+# kuser_get_tls
+SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0FE0'
+# kuser_cmpxchg
+SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0FC0'
+# kuser_memory_barrier
+SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0FA0'
+# kuser_cmpxchg64
+SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0F60'
+
+
 # Last rules means that every event should has a pair
 DENY .* '.*' ''
 DENY .* '' '.*'
