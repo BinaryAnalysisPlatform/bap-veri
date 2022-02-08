@@ -115,17 +115,21 @@ end
 
 let new_insn arch mem insn =
   let open KB.Syntax in
-  KB.Object.create Theory.Program.cls >>= fun code ->
-  KB.provide Arch.slot code arch >>= fun () ->
-  KB.provide Memory.slot code (Some mem) >>= fun () ->
-  KB.provide Dis.Insn.slot code (Some insn) >>| fun () ->
+  let addr = Memory.min_addr mem in
+  let* code = Theory.Label.for_addr (Word.to_bitvec addr) in
+  let* unit = KB.Symbol.intern "trace" Theory.Unit.cls in
+  KB.sequence [
+    KB.provide Arch.slot code arch;
+    KB.provide Image.Spec.slot unit (Image.Spec.from_arch arch);
+    KB.provide Theory.Label.unit code (Some unit);
+    KB.provide Memory.slot code (Some mem);
+    KB.provide Dis.Insn.slot code (Some insn);
+  ] >>| fun () ->
   code
 
 let lift arch mem insn =
-  match KB.run Theory.Program.cls (new_insn arch mem insn) KB.empty with
-  | Ok (code,_) ->
-    let insn = KB.Value.get Theory.Semantics.slot code in
-    Ok (Insn.bil insn)
+  match Toplevel.try_eval Theory.Semantics.slot (new_insn arch mem insn) with
+  | Ok sema -> Ok (Insn.bil sema)
   | Error c ->
     let er = Error.of_string (Sexp.to_string (KB.sexp_of_conflict c)) in
     Error er
@@ -142,13 +146,6 @@ let other_events c = match c#other with
   | None -> []
   | Some c -> Set.to_list c#events
 
-(*let is_previous_mv tag test ev =
-  match Value.get tag ev with
-  | None -> false
-  | Some mv -> Move.cell mv = test
-
-  let is_previous_write = is_previous_mv Event.register_write
-  let is_previous_store = is_previous_mv Event.memory_store*)
 let self_events c = Set.to_list c#events
 let same_var var mv =
   String.equal (Var.name var) (Var.name @@ Move.cell mv)
