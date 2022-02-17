@@ -19,17 +19,19 @@ class context: Veri_stat.t -> Veri_policy.t -> Trace.t -> object('s)
     method switch: 's
     method stat : Veri_stat.t
     method code : Chunk.t option
+    method mode : Mode.t option
     method events : Value.Set.t
     method reports : Veri_report.t stream
     method register_event : Trace.event -> 's
     method notify_error: Veri_error.t -> 's
     method set_bil : bil -> 's
     method set_code : Chunk.t -> 's
+    method set_mode : Mode.t -> 's
     method set_insn: string -> 's
     method drop_pc : 's
   end
 
-class ['a] t : arch -> Disasm.t -> object('s)
+class ['a] t : arch -> object('s)
     constraint 'a = #context
     inherit ['a] Veri_traci.t
   end

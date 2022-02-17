@@ -14,12 +14,14 @@ val create :
   bil:Bap.Std.bil ->
   insn:string ->
   code:string ->
+  mode: Mode.t option ->
   left:event list ->
   right:event list ->
   data:(rule * matched) list -> t
 
 val bil  : t -> bil
 val code : t -> string
+val mode : t -> Mode.t option
 val insn : t -> string
 val left : t -> Trace.event list
 val right: t -> Trace.event list

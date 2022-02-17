@@ -64,14 +64,12 @@ let eval_file file policy show_errs =
     match Dict.find (Trace.meta trace) Meta.arch with
     | None -> mk_er "trace of unknown arch"
     | Some arch ->
-      Dis.with_disasm ~backend:"llvm" (Arch.to_string arch) ~f:(fun dis ->
-          let dis = Dis.store_asm dis |> Dis.store_kinds in
-          let stat = Veri_stat.empty in
-          let ctxt = new Veri.context stat policy trace in
-          let veri = new Veri.t arch dis in
-          if show_errs then errors_stream ctxt#reports;
-          let ctxt' = Monad.State.exec (veri#eval_trace trace) ctxt in
-          Ok ctxt'#stat)
+      let stat = Veri_stat.empty in
+      let ctxt = new Veri.context stat policy trace in
+      let veri = new Veri.t arch in
+      if show_errs then errors_stream ctxt#reports;
+      let ctxt' = Monad.State.exec (veri#eval_trace trace) ctxt in
+      Ok ctxt'#stat
 
 let read_dir path =
   let dir = Caml_unix.opendir path in
