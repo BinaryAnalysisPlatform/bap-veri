@@ -136,7 +136,9 @@ let new_insn arch mode mem =
   | Error er -> KB.fail (Veri_error er)
   | Ok (mem, insn) ->
     KB.provide Memory.slot code (Some mem) >>= fun () ->
-    KB.provide Dis.Insn.slot code insn >>| fun () ->
+    KB.provide Dis.Insn.slot code insn >>= fun () ->
+    KB.promising Theory.Label.unit ~promise:(fun _ -> !!(Some unit)) @@ fun () ->
+    KB.collect Theory.Semantics.slot code >>| fun _ ->
     code
 
 let disasm_and_lift arch mode mem =
