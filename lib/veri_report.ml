@@ -11,6 +11,7 @@ type t = {
   bil  : bil;
   insn : string;
   code : string;
+  mode : Mode.t option;
   left : event list;
   right: event list;
   data : (rule * matched) list;
@@ -31,6 +32,10 @@ include Regular.Make(struct
         String.iter ~f:(fun c -> Format.fprintf fmt "%02X " (Char.to_int c)) s in
       Format.fprintf fmt "@[<h>%a@]" pp s
 
+    let pp_mode fmt = function
+      | Some m -> Format.fprintf fmt "(%a)" Mode.pp m
+      | None -> ()
+
     let pp_evs fmt evs =
       List.iter ~f:(fun ev ->
           Format.(fprintf std_formatter "%a; " Value.pp ev)) evs
@@ -41,8 +46,8 @@ include Regular.Make(struct
 
     let pp fmt t =
       let bil = Stmt.simpl t.bil in
-      Format.fprintf fmt "@[<v>%s %a@,left:  %a@,right: %a@,%a@]@."
-        t.insn pp_code t.code pp_evs t.left pp_evs t.right Bil.pp bil;
+      Format.fprintf fmt "@[<v>%s %a%a@,left:  %a@,right: %a@,%a@]@."
+        t.insn pp_code t.code pp_mode t.mode pp_evs t.left pp_evs t.right Bil.pp bil;
       List.iter ~f:(pp_data fmt) t.data;
       Format.print_newline ()
 

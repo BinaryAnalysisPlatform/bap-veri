@@ -44,11 +44,8 @@ module Disasm = struct
     match Dis.insn_of_mem dis mem with
     | Error er -> Error (`Disasm_error er)
     | Ok r -> match r with
-      | mem', Some insn, `finished -> Ok (mem',insn)
-      | _, None, _ ->
-        let er = Error.of_string "nothing was disasmed" in
-        Error (`Disasm_error er)
-      | _, _, `left _ -> Error `Overloaded_chunk
+      | _, Some _, `left _ -> Error `Overloaded_chunk
+      | mem', insn, _ -> Ok (mem',insn)
 
   let insn_name = Dis.Insn.name
 end
@@ -63,6 +60,7 @@ class context stat policy trace = object(self:'s)
   val other : 's option = None
   val insn  : string option = None
   val code  : Chunk.t option = None
+  val mode  : Mode.t option = None
   val stat  : Veri_stat.t = stat
   val bil   : bil = []
 
@@ -72,6 +70,7 @@ class context stat policy trace = object(self:'s)
       ~left:(Set.to_list (Option.value_exn other)#events)
       ~insn:(Option.value_exn insn)
       ~code:(Option.value_exn code |> Chunk.data)
+      ~mode
 
   method private finish_step stat =
     let s = {< other = None; error = None; insn = None; bil = [];
@@ -98,12 +97,14 @@ class context stat policy trace = object(self:'s)
     s#drop_pc
 
   method code  = code
+  method mode = mode
   method stat  = stat
   method other = other
   method events  = events
   method reports = fst stream
   method set_bil  b = {< bil = b >}
   method set_code c = {< code = Some c >}
+  method set_mode m = {< mode = Some m >}
   method set_insn s = {< insn = Some s >}
   method notify_error er   = {< error = Some er >}
   method register_event ev = {< events = Set.add events ev; >}
@@ -112,31 +113,49 @@ class context stat policy trace = object(self:'s)
   method drop_pc = self#with_pc Bil.Bot
 end
 
+type KB.conflict += Veri_error of Veri_error.t
 
-let new_insn arch mem insn =
+let trace_unit = KB.Symbol.intern "trace" Theory.Unit.cls
+
+let new_insn arch mode mem =
   let open KB.Syntax in
   let addr = Memory.min_addr mem in
   let* code = Theory.Label.for_addr (Word.to_bitvec addr) in
-  let* unit = KB.Symbol.intern "trace" Theory.Unit.cls in
+  let* unit = trace_unit in
   KB.sequence [
-    KB.provide Arch.slot code arch;
     KB.provide Image.Spec.slot unit (Image.Spec.from_arch arch);
     KB.provide Theory.Label.unit code (Some unit);
-    KB.provide Memory.slot code (Some mem);
-    KB.provide Dis.Insn.slot code (Some insn);
-  ] >>| fun () ->
-  code
+    match mode with
+    | Some mode -> KB.provide Mode.slot code mode
+    | None -> KB.return ()
+  ] >>= fun () ->
+  let* target = KB.collect Theory.Unit.target unit in
+  let* coding = KB.collect Theory.Label.encoding code in
+  let dis = Dis.lookup target coding |> Or_error.ok_exn in
+  match Disasm.insn dis mem with
+  | Error er -> KB.fail (Veri_error er)
+  | Ok (mem, insn) ->
+    KB.provide Memory.slot code (Some mem) >>= fun () ->
+    KB.provide Dis.Insn.slot code insn >>= fun () ->
+    KB.promising Theory.Label.unit ~promise:(fun _ -> !!(Some unit)) @@ fun () ->
+    KB.collect Theory.Semantics.slot code >>| fun _ ->
+    code
 
-let lift arch mem insn =
-  match Toplevel.try_eval Theory.Semantics.slot (new_insn arch mem insn) with
-  | Ok sema -> Ok (Insn.bil sema)
+let disasm_and_lift arch mode mem =
+  let code = new_insn arch mode mem in
+  match Toplevel.try_eval Theory.Semantics.slot code with
+  | Error (Veri_error er) -> Error er
   | Error c ->
     let er = Error.of_string (Sexp.to_string (KB.sexp_of_conflict c)) in
-    Error er
+    Error (`Disasm_error er)
+  | Ok sema ->
+    match Toplevel.eval Dis.Insn.slot code with
+    | None -> Error (`Disasm_error (Error.of_string "nothing was disasmed"))
+    | Some insn -> Ok (sema, insn)
 
 let target_info arch =
   let module Target = (val target_of_arch arch) in
-  Target.CPU.mem, lift arch
+  Target.CPU.mem
 
 let memory_of_chunk endian chunk =
   Bigstring.of_string (Chunk.data chunk) |>
@@ -154,9 +173,9 @@ let same_addr addr mv = Addr.equal addr (Move.cell mv)
 
 type find = [ `Addr of addr | `Var of var ]
 
-class ['a] t arch dis =
+class ['a] t arch =
   let endian = Arch.endian arch in
-  let mem_var, lift = target_info arch in
+  let mem_var = target_info arch in
 
   object(self)
     constraint 'a = #context
@@ -254,24 +273,19 @@ class ['a] t arch dis =
     method! eval bil =
       super#eval (Stmt.normalize ~normalize_exp:true bil)
 
-    method private eval_insn (mem, insn) =
-      let name = Disasm.insn_name insn in
-      SM.update (fun c -> c#set_insn name) >>= fun () ->
-      match lift mem insn with
-      | Error er ->
-        SM.update (fun c -> c#notify_error (`Lifter_error (name, er)))
-      | Ok bil ->
-        SM.update (fun c -> c#set_bil bil) >>= fun () ->
-        self#eval bil
-
     method private eval_chunk chunk =
       self#update_event (Value.create Event.pc_update (Chunk.addr chunk)) >>= fun () ->
       match memory_of_chunk endian chunk with
       | Error er -> SM.update (fun c -> c#notify_error (`Damaged_chunk er))
-      | Ok mem ->
-        match Disasm.insn dis mem with
+      | Ok mem -> SM.get () >>= fun ctxt ->
+        match disasm_and_lift arch ctxt#mode mem with
+        | Ok (sema, insn) ->
+          let name = Disasm.insn_name insn in
+          SM.update (fun c -> c#set_insn name) >>= fun () ->
+          let bil = Insn.bil sema in
+          SM.update (fun c -> c#set_bil bil) >>= fun () ->
+          self#eval bil
         | Error er -> SM.update (fun c -> c#notify_error er)
-        | Ok insn -> self#eval_insn insn
 
     method! eval_memory_load mv =
       let addr = Bil.int @@ Move.cell mv in
@@ -294,11 +308,16 @@ class ['a] t arch dis =
       super#eval_exec code >>= fun () ->
       SM.update (fun c -> c#set_code code)
 
+    method! eval_mode mode =
+      super#eval_mode mode >>= fun () ->
+      SM.update (fun c -> c#set_mode mode)
+
     method! eval_event ev =
       super#eval_event ev >>= fun () ->
       Value.Match.(
         select @@
         case Event.code_exec    (fun _ -> SM.return ()) @@
+        case Event.mode         (fun _ -> SM.return ()) @@
         case Event.memory_store (fun _ -> SM.return ()) @@
         case Event.memory_load  (fun _ -> SM.return ()) @@
         default (fun () -> self#update_event ev)) ev

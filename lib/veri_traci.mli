@@ -23,6 +23,7 @@ class ['a] t: arch -> object('s)
   method eval_exec : chunk -> 'a u
   method eval_pc_update : addr -> 'a u
   method eval_context_switch : int -> 'a u
+  method eval_mode: Mode.t -> 'a u
   method eval_syscall : syscall -> 'a u
   method eval_exn : exn -> 'a u
   method eval_call : call -> 'a u

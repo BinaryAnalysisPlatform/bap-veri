@@ -76,6 +76,7 @@ class ['a] t arch =
         case Event.register_read self#eval_register_read @@
         case Event.register_write self#eval_register_write @@
         case Event.code_exec self#eval_exec @@
+        case Event.mode self#eval_mode @@
         case Event.pc_update self#eval_pc_update @@
         case Event.context_switch self#eval_context_switch @@
         case Event.syscall self#eval_syscall @@
@@ -97,6 +98,7 @@ class ['a] t arch =
 
     method eval_exec: chunk -> 'a u = stub
     method eval_context_switch: int -> 'a u = stub
+    method eval_mode: Mode.t -> 'a u = stub
     method eval_syscall: syscall -> 'a u = stub
     method eval_call: call -> 'a u = stub
     method eval_return: return -> 'a u = stub
