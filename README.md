@@ -10,7 +10,6 @@ emitting artificial events.
 ##Build and install
 ```
 oasis setup
-./configure --prefix=`opam config var prefix`
 make
 make install
 ```
