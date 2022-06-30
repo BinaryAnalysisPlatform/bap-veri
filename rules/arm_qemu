@@ -28,6 +28,6 @@ SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0FA0'
 SKIP .* 'pc-update: .*' 'pc-update: 0xFFFF0F60'
 
 
-# Last rules means that every event should has a pair
+# Last rules mean that every event should have a pair
 DENY .* '.*' ''
 DENY .* '' '.*'

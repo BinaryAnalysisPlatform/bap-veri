@@ -1,4 +1,4 @@
-open Core_kernel
+open Core_kernel[@@warning "-D"]
 open Regular.Std
 
 module Calls = String.Map
@@ -20,9 +20,9 @@ let update t name ~ok ~er =
   {t with
    calls =
      Map.change t.calls name
-       (function
-         | None -> Some (ok, er)
-         | Some (ok',er') -> Some (ok + ok', er + er')) }
+       ~f:(function
+           | None -> Some (ok, er)
+           | Some (ok',er') -> Some (ok + ok', er + er')) }
 
 let failbil t name = update t name ~ok:0 ~er:1
 let success t name = update t name ~ok:1 ~er:0
@@ -57,8 +57,8 @@ module Abs = struct
 
   let abs_misexecuted t =
     fold_calls t (fun ~key ~data cnt ->
-      if fst data <> 0 then cnt
-      else cnt + snd data)
+        if fst data <> 0 then cnt
+        else cnt + snd data)
 
   let total t =
     List.length t.errors +
@@ -111,8 +111,8 @@ module Names = struct
 end
 
 let print_table :
-      Format.formatter -> (string * ('a -> string)) list -> 'a list -> unit =
-      fun fmt info rows ->
+  Format.formatter -> (string * ('a -> string)) list -> 'a list -> unit =
+  fun fmt info rows ->
   let open Veri_tab in
   let headers, processors  =
     List.map ~f:fst info, List.map ~f:snd info in
