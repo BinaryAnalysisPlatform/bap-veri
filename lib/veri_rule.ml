@@ -1,4 +1,4 @@
-open Core_kernel
+open Core_kernel[@@warning "-D"]
 open Regular.Std
 
 type trial = Pcre.regexp
@@ -66,7 +66,7 @@ let right_field s =
 
 let create ?insn ?left ?right action =
   let open Result in
-  let of_opt = Option.value_map ~default:empty ~f:ident in
+  let of_opt = Option.value_map ~default:empty ~f:Fn.id in
   let both = String.concat ~sep:" " [of_opt left; of_opt right] in
   Field.create_err (of_opt insn) >>= fun insn ->
   Field.create_err both >>= fun both ->
@@ -138,7 +138,7 @@ end
 let of_string_err = S.of_string_err
 
 include Sexpable.Of_stringable(S)
-include Binable.Of_stringable(S)
+include Binable.Of_stringable(S)[@@warning "-D"]
 include (S : Stringable with type t := t)
 
 include Regular.Make(struct

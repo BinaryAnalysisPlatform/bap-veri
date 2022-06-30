@@ -1,4 +1,4 @@
-open Core_kernel
+open Core_kernel[@@warning "-D"]
 open Bap.Std
 open Bap_traces.Std
 open Bap_future.Std
@@ -88,7 +88,7 @@ let read_dir path =
 
 let main path rules out show_errs show_stat _ctxt =
   let files =
-    if Sys.is_directory path then (read_dir path)
+    if Caml.Sys.is_directory path then (read_dir path)
     else [path] in
   let policy = make_policy rules in
   let eval stats file =

@@ -48,6 +48,6 @@ SKIP .* '.F => .*' ''
 DENY .* '(.F) <= .*' '\1 <= .*'
 SKIP .* '.F <= .*' ''
 
-# Last rules means that every event should has a pair
+# The last two rules mean that every event should have a pair
 DENY .* '.*' ''
 DENY .* '' '.*'

@@ -54,6 +54,6 @@ SKIP .* '.* => .*' ''
 SKIP .* '.* => 0$' ''
 SKIP .* '.* <= 0$' ''
 
-# Last rules means that every event should has a pair
+# These rules mean that every event should have a pair
 DENY .* '.*' ''
 DENY .* '' '.*'

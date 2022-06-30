@@ -1,4 +1,4 @@
-open Core_kernel
+open Core_kernel[@@warning "-D"]
 open Bap.Std
 open Bap_traces.Std
 open Monads.Std
@@ -12,7 +12,7 @@ type event = Trace.event
 let stub = fun _ -> SM.return ()
 
 class context trace =
- object(self:'s)
+  object(self:'s)
     inherit Bili.context [@@warning "-D"]
     val events = Trace.read_events trace
     method next_event = match Seq.next events with
