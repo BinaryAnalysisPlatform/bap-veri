@@ -98,18 +98,6 @@ make install
 
 Now you can change the code and repeat the last two steps. 
 
-
-## Usage
-Program works only with files with `.frames` extension.
-```
-bap veri --show-errors --show-stat --rules "path to rules file" PATH
-
-`PATH` is either directory with files from a tracer, either a file.
-`show-errors` option allows to see a detailed information about BIL errors
-`show-stat` option allows to see a summary over a trace verification.
-
-```
-
 [trace-events]: https://binaryanalysisplatform.github.io/bap/api/master/bap-traces/Bap_traces/Std/index.html#trace-events
 [pintrace]: https://github.com/BinaryAnalysisPlatform/bap-pintraces
 [qemu]: https://github.com/BinaryAnalysisPlatform/qemu
